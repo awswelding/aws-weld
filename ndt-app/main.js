@@ -111,8 +111,20 @@ async function fetchInspectors() {
     }
 }
 
-function renderInspectorsTable() {
+function renderInspectorsTable(filterText = '') {
+    const filtered = filterText 
+        ? inspectors.filter(i => 
+            i.fullName.toLowerCase().includes(filterText.toLowerCase()) || 
+            i.inspectorNumber.toString().includes(filterText))
+        : inspectors;
+
     const tableHtml = `
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="inspectorSearch" placeholder="Search by name or number..." 
+                   value="${filterText}"
+                   style="width: 100%; max-width: 300px; padding: 8px;"
+                   oninput="renderInspectorsTable(this.value)">
+        </div>
         <table>
             <thead>
                 <tr>
@@ -123,14 +135,14 @@ function renderInspectorsTable() {
                 </tr>
             </thead>
             <tbody>
-                ${inspectors.map(inspector => `
+                ${filtered.map(inspector => `
                     <tr>
                         <td>${inspector.inspectorNumber}</td>
                         <td>${inspector.fullName}</td>
                         <td>${inspector.certificates ? inspector.certificates.length : 0} certificates</td>
                         <td>
-                            <button onclick="editInspector(${inspector.inspectorNumber})">Edit</button>
-                            <button onclick="deleteInspector(${inspector.inspectorNumber})">Delete</button>
+                            <button class="edit-btn" onclick="editInspector('${inspector.inspectorNumber}')">Edit</button>
+                            <button class="delete-btn" onclick="deleteInspector('${inspector.inspectorNumber}')">Delete</button>
                         </td>
                     </tr>
                 `).join('')}
@@ -138,6 +150,12 @@ function renderInspectorsTable() {
         </table>
     `;
     document.getElementById('certificateTable').innerHTML = tableHtml;
+    // Set focus back to search input if it was active
+    if (filterText) {
+        const searchInput = document.getElementById('inspectorSearch');
+        searchInput.focus();
+        searchInput.setSelectionRange(filterText.length, filterText.length);
+    }
 }
 
 document.getElementById('addCertificateBtn').addEventListener('click', () => {
@@ -208,7 +226,7 @@ async function deleteInspector(inspectorNumber) {
         });
         fetchInspectors();
     } catch (error) {
-        alert('Error deleting inspector');
+        alert('Error deleting inspector: ' + (error.response?.data?.message || error.message));
     }
 }
 
@@ -330,7 +348,8 @@ async function deleteCertificateType(certId) {
         fetchCertificateTypes();
         loadMasterCertificates(); // Refresh checkboxes
     } catch (error) {
-        alert('Error deleting certificate type');
+        const msg = error.response?.data?.message || 'Error deleting certificate type';
+        alert(msg);
     }
 }
 
